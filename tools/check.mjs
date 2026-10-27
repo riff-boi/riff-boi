@@ -19,6 +19,10 @@ import { wavFile } from '../js/wav.js';
 import { riffToLink, riffFromLink } from '../js/share.js';
 import { neckFromSetup, pickFrettingHand, spotForHand, fretAt, SETUP_FRETS } from '../js/neck.js';
 import { soundExtension } from '../js/sounds.js';
+import { parseChord, parseChords, suggestForSong, suggestForChord, makeScale, SCALE_BY_ID, nextMove, spellScale, noteName, chordKind } from '../js/music.js';
+import { streakOf } from '../js/progress.js';
+import { makeQuestion } from '../js/quiz.js';
+import { findPosition } from '../js/shapes.js';
 
 let allOk = true;
 function check(label, ok, detail = '') {
@@ -1003,6 +1007,44 @@ ${note('E', 5, 2)}${note('G', 5, 2, '<chord/>')}${note('B', 3, 2, '<voice>2</voi
   check('sheet music: a zipped .mxl reads the same', shown(zipped) === expected, shown(zipped));
   check('sheet music: a file that isn\'t MusicXML is turned down', await readMusicXml(new Blob(['<html></html>'])).then(() => false, () => true));
 }
+
+// --- Learn screens: chords and scales (js/music.js) ---
+const chordNotes = (chord) => chord.tones.map((t) => noteName(t.pc, false)).join(' ');
+check('chords: Am is A C E', chordNotes(parseChord('Am')) === 'A C E', chordNotes(parseChord('Am')));
+check('chords: Cmaj7 is C E G B, and CM7 means the same', chordNotes(parseChord('Cmaj7')) === 'C E G B' && chordNotes(parseChord('CM7')) === 'C E G B');
+check('chords: G7 is G B D F and counts as a 7 chord', chordNotes(parseChord('G7')) === 'G B D F' && chordKind(parseChord('G7')) === 'dom');
+check('chords: C/E has no extra note (E is already in C)', chordNotes(parseChord('C/E')) === 'C E G' && parseChord('C/E').tones.length === 3);
+check('chords: C/D adds D as a bass note, because D is not in C', parseChord('C/D').tones.some((t) => t.role === 'bass' && t.pc === 2));
+check('chords: nonsense is not a chord', parseChord('Xyz') === null && parseChord('Am99') === null);
+check('chords: a typed line is split into chords and words we could not read',
+  parseChords('Am F C Zz G').chords.length === 4 && parseChords('Am F C Zz G').unreadable.join() === 'Zz');
+const amSong = suggestForSong(parseChords('Am F C G').chords);
+check('scales: Am F C G → A natural minor first, with C major as its twin',
+  amSong.pick.root === 9 && amSong.pick.def.id === 'minor' && amSong.pick.twins.some((t) => t.root === 0 && t.def.id === 'major'), `${amSong.pick.root} ${amSong.pick.def.id}`);
+const blues = suggestForSong(parseChords('A7 D7 E7').chords);
+check('scales: A7 D7 E7 is a blues song, and A minor pentatonic is picked', blues.isBlues && blues.pick.root === 9 && blues.pick.def.id === 'minpent');
+check('scales: a pop song is not a blues song', !amSong.isBlues);
+const forC = suggestForChord(parseChord('C'), makeScale(0, SCALE_BY_ID.major));
+check('scales: for C (staying in C major), C major is first', forC.best[0].root === 0 && forC.best[0].def.id === 'major');
+const move = nextMove(parseChord('Am'), parseChord('F'));
+check('chords: Am to F share A and C, and the smallest step is E to F', move.shared.length === 2 && move.best.from === 4 && move.best.to === 5, JSON.stringify(move));
+check('spelling: G major has F#, not Gb; Db major has Gb', spellScale('G', [0, 2, 4, 5, 7, 9, 11]).join(' ') === 'G A B C D E F#' && spellScale('Db', [0, 2, 4, 5, 7, 9, 11]).join(' ') === 'Db Eb F Gb Ab Bb C');
+
+// --- Learn screens, part 2: riff theory, progress, quiz, shapes ---
+check('progress: 3 days in a row ending today is a streak of 3', streakOf(['2026-10-24', '2026-10-25', '2026-10-26'], '2026-10-26') === 3);
+check('progress: a streak is kept until the end of the next day', streakOf(['2026-10-24', '2026-10-25'], '2026-10-26') === 2);
+check('progress: a gap breaks the streak', streakOf(['2026-10-20', '2026-10-26'], '2026-10-26') === 1 && streakOf(['2026-10-20'], '2026-10-26') === 0);
+let quizOk = true;
+for (let i = 0; i < 400; i++) {
+  const q = makeQuestion();
+  const unique = new Set(q.options).size === q.options.length;
+  if (!unique || q.answer < 0 || q.answer >= q.options.length || !q.options[q.answer] || !q.explain || !q.prompt) { quizOk = false; break; }
+}
+check('quiz: 400 random questions each have unique choices and one right answer', quizOk);
+const box1 = findPosition(9, SCALE_BY_ID.minpent, 0);
+check('shapes: A minor pentatonic position 1 is frets 5 to 8, 12 notes', box1.start === 5 && box1.width === 4 && box1.notes.length === 12, JSON.stringify([box1.start, box1.notes.length]));
+const box2 = findPosition(9, SCALE_BY_ID.minpent, 1);
+check('shapes: A minor pentatonic position 2 starts at fret 7', box2.start === 7 && box2.notes.length === 12, JSON.stringify([box2.start, box2.notes.length]));
 
 console.log(allOk ? '\nALL CHECKS PASS' : '\nSOME CHECKS FAILED');
 process.exit(allOk ? 0 : 1);

@@ -314,3 +314,12 @@ What I learned and the problems I solved while building Riff Boi. I'm using this
 - Guitar music is written an octave higher than it sounds, so a part called "Guitar" gets moved down an octave.
 - Then Riff Boi picks the strings and frets the same way it does for anything I play: the spots that need the least hand movement, based on the notes around each one.
 
+
+## Oct 26, 2026: Learn screens (Chords, Theory, Lessons, Quiz, Shapes)
+- Five new screens, each with a button on the home screen. The music logic lives in `js/music.js`, which never touches the page, so `tools/check.mjs` tests it in Node. Each screen has its own file, and `app.js` only shows and hides them.
+- Chords: a scale is a set of notes. Every scale on every starting note gets a score for how many of your chord notes fit inside it (the root and 3rd count most). A minor key and its relative major share notes, so the list shows one and says "same notes as" for the other.
+- Notes are numbers 0 to 11 in the code, and names are made at the end, with sharps or flats chosen from what you typed or from the key.
+- Shapes: a position is a window of 4 or 5 frets where every string has 2 or more scale notes, and the lowest note on the low E string is the note it is named after. My first version found a valid window that was a different position, and a check caught it.
+- Quiz and progress: the quiz builds questions from a random type, and a check runs 400 of them to make sure each has one right answer and no repeated choices. Lessons you tick, your best quiz score and your practice days are saved in the browser. A streak counts back from today.
+- Git: I built this on an old copy first. Meanwhile `main` on GitHub had moved a long way ahead, so I rebuilt the branch from the latest `main` and copied my new files in. A branch made from old code would have undone newer work.
+- I left out a "Theory of this riff" box. `scale.js` already finds the scale of a riff.
