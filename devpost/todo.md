@@ -8,6 +8,8 @@ Deadline: Wednesday, Sep 30, 2026 at 5:00pm EDT (Beginner's Paradise – FirstCo
 
 ## Next up
 
+Oct 26, 2026 (after the deadline): added the Learn screens (Chords, Theory, Lessons, Quiz, Shapes) on the `feature/learn-screens` branch, as a pull request. It adds a new row of buttons on the home screen and 8 new files in `js/`. Test it on my phone and guitar before merging.
+
 Where we left off (Sep 27, 2026):
 - While I was away (Sep 27 afternoon), Claude: smoke-tested riffboi.com (recording with a bend and release, the riff screen, playback, Your sound, share links, upload, New Tab, tuner, delete and Delete all: all fine), re-checked the bend fix, added a screenshot and the missing tech (MediaPipe, IndexedDB, Vercel) to the README, added the bend fix and camera setup to my story's challenges and the video script, and made `bends.png` (my real bends) for the gallery. Not pushed yet.
 - My answers (Sep 27): pushed, keep the 2 new story paragraphs, and `bends.png` goes in the Devpost gallery instead of `riff-bend.png`.
