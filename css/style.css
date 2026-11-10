@@ -1092,10 +1092,19 @@ body {
 
 /* Three outlined buttons on the home screen. */
 .learn-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr)); /* 3 buttons on the first row, 2 wider ones below */
   gap: 10px;
-  justify-content: center;
-  flex-wrap: wrap;
+  width: 100%;
+}
+
+.learn-row .secondary-btn {
+  grid-column: span 2;
+  min-height: 46px;
+}
+
+.learn-row .secondary-btn:nth-child(n + 4) {
+  grid-column: span 3;
 }
 
 /* These screens are wider than the recording screens: tables and the guitar neck need room. */
@@ -1700,3 +1709,87 @@ body {
 
 .shape-board svg { display: block; width: 100%; min-width: 360px; height: auto; }
 .nut-line { stroke: var(--text); stroke-width: 5; }
+
+/* --- Learn: polish for phones --- */
+
+/* Fingers need about 40px. */
+.chip-small,
+.segment button,
+.quiz-option,
+.small-btn {
+  min-height: 40px;
+}
+
+.chip-small {
+  padding: 8px 14px;
+}
+
+/* Lesson topics: one row that scrolls sideways, so the card gets the screen. */
+.lesson-bar {
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+#lesson-topics {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+
+#lesson-topics::-webkit-scrollbar { display: none; }
+#lesson-topics .chip-small { flex: none; }
+.lesson-bar > .chip-row:last-child { flex: none; }
+
+.lesson-feed {
+  height: calc(100dvh - 210px);
+}
+
+/* The shape picture must never make the page scroll sideways. */
+.shape-board {
+  overflow-x: auto;
+}
+
+.shape-board svg {
+  min-width: 320px;
+}
+
+.quiz-option {
+  min-height: 56px;
+}
+
+/* --- Chord shapes, play chords, add a chord, riff scale buttons --- */
+.chord-play { align-self: flex-start; min-height: 44px; }
+.chip.playing { border-color: var(--text); box-shadow: inset 0 0 0 1px var(--text); }
+
+.fingerings { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 4px; }
+.fingering {
+  flex: none;
+  width: 104px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 4px 8px;
+  font: inherit;
+  font-size: 0.8rem;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid #3a3a3a;
+  cursor: pointer;
+}
+.fingering:hover { border-color: var(--red); }
+.fingering svg { width: 100%; height: auto; }
+.cd-string { stroke: #8a8a8a; stroke-width: 1; }
+.cd-fret { stroke: #5a5a5a; stroke-width: 1; }
+.cd-nut { stroke: var(--text); stroke-width: 3; }
+.cd-dot { fill: var(--text); }
+.cd-root { fill: var(--red); }
+.cd-open { fill: none; stroke: var(--text); stroke-width: 1.5; }
+.cd-mark { font: 600 11px var(--tab-font); fill: var(--muted); text-anchor: middle; }
+.cd-base { font: 600 10px var(--tab-font); fill: var(--muted); }
+
+.add-chord[aria-pressed="true"] { background: #2a1214; border-color: var(--red); }
+
+.riff-scale-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.riff-scale-actions[hidden] { display: none; }

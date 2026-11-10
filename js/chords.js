@@ -3,7 +3,8 @@
 
 import {
   INTERVAL_NAMES, noteName, parseChords, makeScale, sameScale, scaleName, coverage,
-  suggestForSong, suggestForChord, useFlats, nextMove, playNote, strumChord,
+  suggestForSong, suggestForChord, useFlats, nextMove, playNote, strumChord, fingeringsFor, fingeringNotes,
+  spellScale, SCALE_BY_ID,
 } from './music.js';
 
 const $ = (id) => document.getElementById(id);
@@ -16,6 +17,7 @@ const state = {
   scale: null, // the scale showing on the guitar
   flats: false,
   numbers: false, // show 1 b3 5 instead of note names
+  shapes: [], // the fingerings showing for the picked chord
   onlyChordNotes: false,
   area: false, // show one area of the neck instead of all of it
   areaStart: 4,
@@ -96,6 +98,31 @@ function drawBoard(chord) {
 
 // --- The pieces around the fretboard ---
 
+// A small chord picture: 6 strings (low E on the left) and 5 frets. -1 = don't play that string.
+const LOW_TO_HIGH = [...OPEN_STRINGS].reverse();
+function chordDiagram(frets, rootPc) {
+  const fretted = frets.filter((f) => f > 0);
+  const base = fretted.length && Math.max(...fretted) > 5 ? Math.min(...fretted) : 1; // the first fret shown
+  const left = 16;
+  const gap = 13;
+  const top = 26;
+  const row = 18;
+  let svg = `<svg viewBox="0 0 100 126" aria-hidden="true">`;
+  for (let i = 0; i < 6; i++) svg += `<line x1="${left + i * gap}" x2="${left + i * gap}" y1="${top}" y2="${top + 5 * row}" class="cd-string"/>`;
+  for (let r = 0; r <= 5; r++) svg += `<line x1="${left}" x2="${left + 5 * gap}" y1="${top + r * row}" y2="${top + r * row}" class="${r === 0 && base === 1 ? 'cd-nut' : 'cd-fret'}"/>`;
+  frets.forEach((fret, i) => {
+    const x = left + i * gap;
+    if (fret < 0) svg += `<text x="${x}" y="19" class="cd-mark">x</text>`;
+    else if (fret === 0) svg += `<circle cx="${x}" cy="14" r="4" class="cd-open"/>`;
+    else {
+      const isRoot = (LOW_TO_HIGH[i] + fret) % 12 === rootPc;
+      svg += `<circle cx="${x}" cy="${top + (fret - base + 0.5) * row}" r="5.5" class="${isRoot ? 'cd-root' : 'cd-dot'}"/>`;
+    }
+  });
+  if (base > 1) svg += `<text x="${left + 5 * gap + 6}" y="${top + row / 2 + 4}" class="cd-base">${base}fr</text>`;
+  return `${svg}</svg>`;
+}
+
 const chip = (index, title, small) => `<button type="button" role="tab" class="chip" data-index="${index}" aria-selected="${state.focus === index}"><span class="chip-name">${title}</span><span class="chip-notes">${small}</span></button>`;
 
 function drawChips() {
@@ -163,7 +190,12 @@ function drawNotes(chord) {
   }
   const order = { root: 0, third: 1, fifth: 2, seventh: 3, color: 4, bass: 5 };
   const tones = [...chord.tones].sort((a, b) => order[a.role] - order[b.role]);
+  state.shapes = fingeringsFor(chord);
+  const shapes = state.shapes.length
+    ? `<div class="fingerings">${state.shapes.map((s, i) => `<button type="button" class="fingering" data-shape="${i}" aria-label="Hear ${chord.name}: ${s.name}">${chordDiagram(s.frets, chord.root)}<span>${s.name}</span></button>`).join('')}</div><p class="muted">Tap a shape to hear it. Red = the main note.</p>`
+    : '<p class="muted">No shape for this chord yet.</p>';
   let html = `<h3 class="panel-title">Notes to play over ${chord.name}</h3><p class="muted">Using ${scaleName(scale, state.flats)}.</p>
+    <h4 class="panel-label">How to play it</h4>${shapes}
     <h4 class="panel-label">Stop on these</h4>
     <div class="advice">${tones.map((t) => `${badge(t.pc, chord.root, t.role === 'root' ? 'root' : 'tone')}<span>${roleAdvice(t)}</span>`).join('')}</div>`;
 
@@ -208,6 +240,27 @@ function drawSheet() {
     <div class="table-scroll"><table class="learn-table"><thead><tr><th>Chord</th><th>Main note</th><th>3rd</th><th>5th</th><th>Extra notes</th><th>Move to next chord</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 
+// Chords that belong to the song's key (if it is plainly major or minor), to tap and add.
+const KEY_TRIADS = ['', 'm', 'm', '', '', 'm', 'dim'];
+const KEY_NUMERALS = { major: ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'vii°'], minor: ['i', 'ii°', 'III', 'iv', 'v', 'VI', 'VII'] };
+
+function drawAddChords() {
+  const options = [state.song.pick, ...state.song.best].filter(Boolean);
+  const key = options.find((s) => s.def.id === 'major' || s.def.id === 'minor');
+  $('chord-add').hidden = !key;
+  if (!key) return;
+  const minor = key.def.id === 'minor';
+  const names = spellScale(noteName(key.root, state.flats), key.def.distances);
+  const triads = minor ? KEY_TRIADS.slice(5).concat(KEY_TRIADS.slice(0, 5)) : KEY_TRIADS;
+  const numerals = KEY_NUMERALS[key.def.id];
+  const chips = names.map((name, i) => {
+    const chord = name + triads[i];
+    const used = state.chords.some((c) => c.name === chord);
+    return `<button type="button" class="chip-small add-chord" data-chord="${chord}" aria-pressed="${used}">${numerals[i]} · ${chord}</button>`;
+  }).join('');
+  $('chord-add').innerHTML = `<h3 class="panel-title">Add a chord</h3><p class="muted">Chords that belong to ${scaleName(key, state.flats)}. Tap one to add it to your song.</p><div class="chip-row">${chips}</div>`;
+}
+
 function draw() {
   const chord = state.focus >= 0 ? state.chords[state.focus] : null;
   state.flats = useFlats(state.chords, state.scale);
@@ -216,6 +269,7 @@ function draw() {
   drawScales(chord);
   drawNotes(chord);
   drawSheet();
+  drawAddChords();
   $('chord-only').disabled = !chord;
   $('chord-only').closest('label').classList.toggle('off', !chord);
   $('chord-area').max = FRETS - 4;
@@ -238,8 +292,41 @@ function pickChord(index) {
   draw();
 }
 
+// Play the chords one after another.
+let playing = null;
+
+function stopPlaying() {
+  if (playing) clearTimeout(playing.timer);
+  playing = null;
+  $('chord-play').textContent = 'Play chords';
+  for (const chip of $('chord-tabs').children) chip.classList.remove('playing');
+}
+
+function playSong() {
+  if (playing) return stopPlaying();
+  $('chord-play').textContent = 'Stop';
+  playing = {};
+  let i = 0;
+  const step = () => {
+    if (i >= state.chords.length) return stopPlaying();
+    strumChord(state.chords[i]);
+    for (const chip of $('chord-tabs').children) chip.classList.toggle('playing', Number(chip.dataset.index) === i);
+    i++;
+    playing.timer = setTimeout(step, 1200);
+  };
+  step();
+}
+
+// Show one scale on the neck (used by "See on neck" on a saved riff).
+export function showScale(root, scaleId) {
+  state.scale = makeScale(root, SCALE_BY_ID[scaleId]);
+  state.focus = -1;
+  draw();
+}
+
 // Read the typed chords and start over with the best scale for the song.
 export function loadChords(text) {
+  stopPlaying();
   const { chords, unreadable } = parseChords(text);
   state.chords = chords;
   state.unreadable = unreadable;
@@ -274,6 +361,16 @@ export function initChords() {
     const index = Number(button.dataset.index);
     pickChord(index);
     if (index >= 0) strumChord(state.chords[index]);
+  });
+  $('chord-play').addEventListener('click', playSong);
+  $('chord-add').addEventListener('click', (event) => {
+    const button = event.target.closest('.add-chord');
+    if (button) loadChords(`${$('chord-input').value.trim()} ${button.dataset.chord}`);
+  });
+  $('chord-notes').addEventListener('click', (event) => {
+    const button = event.target.closest('.fingering');
+    if (!button) return;
+    fingeringNotes(state.shapes[Number(button.dataset.shape)].frets).forEach((midi, i) => playNote(midi, i * 0.06, 1.6, 0.14));
   });
   $('chord-sheet').addEventListener('click', (event) => {
     const row = event.target.closest('.sheet-row');

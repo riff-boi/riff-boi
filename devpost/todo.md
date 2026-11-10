@@ -8,6 +8,8 @@ Deadline: Wednesday, Sep 30, 2026 at 5:00pm EDT (Beginner's Paradise – FirstCo
 
 ## Next up
 
+Nov 9, 2026: made the Learn screens better on the `feature/learn-polish` branch (phone layout, chord shapes, Play chords, Add a chord, riff scale buttons). Pull request opened. Test on my phone, then merge.
+
 Oct 26, 2026 (after the deadline): added the Learn screens (Chords, Theory, Lessons, Quiz, Shapes) on the `feature/learn-screens` branch, as a pull request. It adds a new row of buttons on the home screen and 8 new files in `js/`. Test it on my phone and guitar before merging.
 
 Where we left off (Sep 27, 2026):

@@ -4,7 +4,7 @@
 import { INTERVAL_NAMES, SCALES, SCALE_BY_ID, noteName, makeScale, playNote, scaleName } from './music.js';
 
 const OPEN_STRINGS = [64, 59, 55, 50, 45, 40]; // high e at the top, like the picture
-const SHAPE_SCALES = ['minpent', 'majpent', 'blues', 'minor', 'major', 'dorian', 'mixo'];
+const SHAPE_SCALES = ['minpent', 'majpent', 'blues', 'minor', 'major', 'dorian', 'mixo', 'harmonic', 'phrygian'];
 
 // How many positions a scale has: one for each of its notes (a 5-note scale has 5 boxes).
 export const positionCount = (def) => def.distances.length;
@@ -81,6 +81,16 @@ function draw() {
   $('shape-board').innerHTML = `${svg}</svg>`;
   $('shape-info').textContent = `${scaleName(scale, flats)}, position ${state.position + 1} of ${positionCount(def)}. Frets ${start} to ${start + width - 1}.`;
   $('shape-positions').innerHTML = Array.from({ length: positionCount(def) }, (_, k) => `<button type="button" class="chip-small" data-position="${k}" aria-pressed="${k === state.position}">${k + 1}</button>`).join('');
+}
+
+// Show one scale (used by "See shapes" on a saved riff).
+export function showShape(root, scaleId) {
+  state.root = root;
+  state.scaleId = scaleId;
+  state.position = 0;
+  $('shape-key').value = String(root);
+  $('shape-scale').value = scaleId;
+  draw();
 }
 
 export function initShapes() {

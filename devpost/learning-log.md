@@ -323,3 +323,11 @@ What I learned and the problems I solved while building Riff Boi. I'm using this
 - Quiz and progress: the quiz builds questions from a random type, and a check runs 400 of them to make sure each has one right answer and no repeated choices. Lessons you tick, your best quiz score and your practice days are saved in the browser. A streak counts back from today.
 - Git: I built this on an old copy first. Meanwhile `main` on GitHub had moved a long way ahead, so I rebuilt the branch from the latest `main` and copied my new files in. A branch made from old code would have undone newer work.
 - I left out a "Theory of this riff" box. `scale.js` already finds the scale of a riff.
+
+## Nov 9, 2026: Making the Learn screens better
+- Looked at them at phone size (375 px wide) first. Found 3 real problems: the five home buttons wrapped into 4 and 1, the Shapes picture made the whole page scroll sideways, and many buttons were shorter than a fingertip. A test that measures the page (is anything wider than the screen? is a button under 36px tall?) found them faster than looking.
+- Chord shapes: a few shapes are written down once (the open chords), and movable ones are slid up the neck by adding the barre fret to every number. A check builds all 207 shapes and makes sure each one plays only notes of its chord, has the root and has every note except the 5th. It caught the open C7, which leaves out the 5th on purpose, so the check now allows that.
+- "Add a chord" lists the 7 chords of the song's key. The key is read from the scale already picked for the song.
+- "Play chords" plays the song one chord every 1.2 seconds with a timer. Loading new chords stops it, so two timers never run at once.
+- A saved riff's scale (from `scale.js`) now has buttons that open it in Shapes or on the Chords neck. `scaleFromName()` turns words like "A# minor pentatonic" into a note number and a scale.
+- My own unfinished changes were on another branch in the same folder. A second folder (a git worktree) let me work on a new branch from the latest `main` without touching them.
