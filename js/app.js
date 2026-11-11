@@ -8,6 +8,8 @@ import { prepareHandTracking, handTrackingReady, startCamera, stopCamera, handAt
 import { neckFromSetup, spotForHand, SETUP_FRETS } from './neck.js';
 import { placeNotes, otherSpots, positionsFor, harmonicSpots, STRING_NAMES, tabText, fretOn, withFret, tabToken, linkMark, textFileName, TUNING } from './tab.js';
 import { tabSvg } from './tabsvg.js';
+import { staffSvg } from './staffsvg.js';
+import { SONGS, partNotes } from './songs.js';
 import { METERS, detectTempo, barStarts } from './rhythm.js';
 import { loadRiffs, saveRiff, updateRiff, deleteRiff, deleteAllRiffs, riffTiming, loadSettings, saveSettings, DEFAULT_SETTINGS } from './storage.js';
 import { riffConfidence, isUnsure } from './confidence.js';
@@ -33,6 +35,8 @@ const screens = {
   cameraSetup: document.getElementById('screen-camera-setup'),
   riff: document.getElementById('screen-riff'),
   editor: document.getElementById('screen-editor'),
+  songs: document.getElementById('screen-songs'),
+  song: document.getElementById('screen-song'),
   chords: document.getElementById('screen-chords'),
   theory: document.getElementById('screen-theory'),
   lessons: document.getElementById('screen-lessons'),
@@ -212,6 +216,13 @@ $('rhythm-input').addEventListener('change', (event) => {
   rememberSettings(); // only for new riffs: saved riffs keep the rhythm they were recorded with
 });
 
+// Standard notation above the tab: on or off everywhere (live, saved riffs and Write a tab).
+$('notation-input').checked = settings.notation;
+$('notation-input').addEventListener('change', (event) => {
+  settings.notation = event.target.checked;
+  rememberSettings();
+});
+
 // Camera: watch the fretting hand to pick strings (see placeWithCamera). It needs the setup first.
 $('camera-input').checked = settings.camera;
 $('camera-setup-btn').hidden = !settings.camera;
@@ -225,7 +236,7 @@ if (settings.camera) prepareHandTracking().catch(console.error);
 
 // The line next to Settings on the home screen: what's set, without opening the drawer.
 function showSettingsSummary() {
-  const parts = [settings.autoTempo ? 'Auto tempo' : `${settings.bpm} BPM`, settings.meter, `note lengths ${settings.rhythm ? 'on' : 'off'}`];
+  const parts = [settings.autoTempo ? 'Auto tempo' : `${settings.bpm} BPM`, settings.meter, `note lengths ${settings.rhythm ? 'on' : 'off'}`, `notation ${settings.notation ? 'on' : 'off'}`];
   if (settings.camera) parts.push(cameraNeck ? 'camera on' : 'camera on (not set up)');
   $('settings-summary').textContent = parts.join(' · ');
 }
@@ -282,8 +293,14 @@ function liveBpm(notes) {
   return liveTempo.bpm;
 }
 
+// The tab picture, with the standard notation (the five-line staff) on top when that's switched on.
+// Both are laid out the same way, so each note sits right above its fret number.
+function tabAndStaff(notes, options) {
+  return (settings.notation ? staffSvg(notes, options) : '') + tabSvg(notes, options);
+}
+
 function drawLiveTab(notes) {
-  liveTab.innerHTML = tabSvg(markUnsure(notes, true), { bpm: liveBpm(notes), timing: settings.rhythm, meter: settings.meter, highlightLast: true });
+  liveTab.innerHTML = tabAndStaff(markUnsure(notes, true), { bpm: liveBpm(notes), timing: settings.rhythm, meter: settings.meter, highlightLast: true });
   liveTab.scrollLeft = liveTab.scrollWidth; // keep the newest notes in view
 }
 
@@ -457,7 +474,7 @@ function drawRiff(riff) {
   stopPlayback();
   closeEdit();
   const timing = riffTiming(riff, settings.bpm);
-  $('riff-tab').innerHTML = tabSvg(riff.notes, timing);
+  $('riff-tab').innerHTML = tabAndStaff(riff.notes, timing);
   $('move-hint').textContent = editHint();
   // Each note can be tapped (or reached with Tab and Enter) to move it to another string.
   $('riff-tab').querySelectorAll('.t-fret').forEach((fret, i) => {
@@ -890,6 +907,7 @@ function openEdit(i) {
   $('move-row').hidden = false;
   $('move-hint').hidden = true;
   $('riff-tab').querySelectorAll('.t-fret').forEach((fret, j) => fret.classList.toggle('t-now', j === i));
+  $('riff-tab').querySelectorAll('.s-head').forEach((head, j) => head.classList.toggle('s-now', j === i));
   box.focus();
   box.select();
 }
@@ -916,6 +934,7 @@ function closeEdit() {
   $('move-row').replaceChildren();
   $('move-hint').hidden = false;
   $('riff-tab').querySelectorAll('.t-now').forEach((fret) => fret.classList.remove('t-now'));
+  $('riff-tab').querySelectorAll('.s-now').forEach((head) => head.classList.remove('s-now'));
 }
 
 // Save the riff's notes and redraw it. The browser may block saving: then the tab still
@@ -1216,16 +1235,19 @@ function stopPlayback() {
 function play(button, container, notes, options, afterEnd = null) {
   if (stopPlaying) return stopPlayback();
   const frets = container.querySelectorAll('.t-fret');
+  const heads = container.querySelectorAll('.s-head'); // the same notes on the staff, if it's shown
   button.textContent = 'Stop';
   const round = () => {
     stopPlaying = playNotes(notes, options, (i) => {
       frets.forEach((fret, j) => fret.classList.toggle('t-now', j === i));
+      heads.forEach((head, j) => head.classList.toggle('s-now', j === i));
       keepInView(container, frets[i]);
     }, (finished) => {
       if (finished && options.loop?.()) return round(); // Loop: again from the top
       stopPlaying = null;
       button.textContent = 'Play';
       frets.forEach((fret) => fret.classList.remove('t-now'));
+      heads.forEach((head) => head.classList.remove('s-now'));
       afterEnd?.();
     });
   };
@@ -1272,7 +1294,7 @@ function setFret(fret) {
 function drawEditor() {
   stopPlayback();
   const { notes, endTime } = writtenRiff(editor.written, settings.bpm);
-  $('editor-tab').innerHTML = tabSvg(notes, { bpm: settings.bpm, endTime, meter: settings.meter, highlightLast: true });
+  $('editor-tab').innerHTML = tabAndStaff(notes, { bpm: settings.bpm, endTime, meter: settings.meter, highlightLast: true });
   $('editor-tab').scrollLeft = $('editor-tab').scrollWidth; // keep the newest notes in view
   $('undo-note-btn').disabled = $('save-tab-btn').disabled = $('editor-play-btn').disabled = editor.written.length === 0;
   $('editor-hint').textContent = editor.written.length
@@ -1563,3 +1585,108 @@ $('shapes-btn').addEventListener('click', () => showScreen('shapes'));
 for (const button of document.querySelectorAll('[data-back]')) button.addEventListener('click', showHome);
 
 openSharedRiff(); // a shared riff's link, or home
+
+// --- Songs: ready-made pieces with more than one part (see songs.js) ---
+
+let shownSong = null; // the song on screen
+let shownPart = 0;    // which of its parts is shown
+
+function showSongs() {
+  $('song-list').replaceChildren(...SONGS.map((song) => {
+    const card = document.createElement('button');
+    card.className = 'riff-card';
+    const top = document.createElement('span');
+    top.className = 'riff-card-top';
+    const label = document.createElement('span');
+    label.className = 'riff-title';
+    label.textContent = song.title;
+    const meta = document.createElement('span');
+    meta.textContent = song.parts.map((part) => part.name).join(' & ');
+    top.append(label, meta);
+    const from = document.createElement('span');
+    from.className = 'riff-date';
+    from.textContent = `${song.from} · ${song.composer}`;
+    card.append(top, from);
+    card.addEventListener('click', () => openSong(song));
+    const item = document.createElement('li');
+    item.append(card);
+    return item;
+  }));
+  showScreen('songs');
+}
+
+function openSong(song) {
+  shownSong = song;
+  shownPart = 0;
+  $('song-title').textContent = song.title;
+  $('song-credit').textContent = `${song.from} · ${song.composer}`;
+  $('song-about').textContent = song.arrangement;
+  $('part-picker').replaceChildren(...song.parts.map((part, i) => {
+    const button = document.createElement('button');
+    button.className = 'choice-btn';
+    button.textContent = part.name;
+    button.addEventListener('click', () => {
+      shownPart = i;
+      drawSong();
+    });
+    return button;
+  }));
+  drawSong();
+  showScreen('song');
+  $('song-tab').scrollLeft = 0;
+}
+
+// The shown part: a guitar part as notation + tab (notation only if it's switched off in
+// Settings, tab only), any other instrument as notation only, at the pitch it sounds.
+function drawSong() {
+  stopPlayback();
+  const part = shownSong.parts[shownPart];
+  const { notes, endTime } = partNotes(part, shownSong.bpm);
+  const options = { bpm: shownSong.bpm, endTime, meter: shownSong.meter };
+  $('song-tab').innerHTML = part.instrument === 'guitar' ? tabAndStaff(notes, options) : staffSvg(notes, { ...options, guitar: false });
+  $('part-picker').querySelectorAll('.choice-btn').forEach((button, i) => button.setAttribute('aria-pressed', String(i === shownPart)));
+}
+
+// Play every part together (or only the shown one), the shown part's notes turning red as they play.
+function playSong() {
+  if (stopPlaying) return stopPlayback();
+  const button = $('song-play-btn');
+  const container = $('song-tab');
+  const shown = shownSong.parts[shownPart];
+  const parts = $('song-solo-input').checked ? [shown] : shownSong.parts;
+  const frets = container.querySelectorAll('.t-fret');
+  const heads = container.querySelectorAll('.s-head');
+  const light = (i) => {
+    frets.forEach((fret, j) => fret.classList.toggle('t-now', j === i));
+    heads.forEach((head, j) => head.classList.toggle('s-now', j === i));
+    keepInView(container, heads[i] ?? frets[i]);
+  };
+  const unlight = () => {
+    frets.forEach((fret) => fret.classList.remove('t-now'));
+    heads.forEach((head) => head.classList.remove('s-now'));
+  };
+  button.textContent = 'Stop';
+  const round = () => {
+    let left = parts.length;
+    let allFinished = true;
+    const stops = parts.map((part) => {
+      const { notes, endTime } = partNotes(part, shownSong.bpm);
+      const options = { bpm: shownSong.bpm, endTime, meter: shownSong.meter, speed: Number($('song-speed-select').value), sound: part.instrument === 'flute' ? 'flute' : 'pluck' };
+      return playNotes(notes, options, part === shown ? light : () => {}, (finished) => {
+        allFinished &&= finished;
+        if (--left > 0) return; // wait for every part to end
+        if (allFinished && $('song-loop-input').checked) return round(); // Loop: again from the top
+        stopPlaying = null;
+        button.textContent = 'Play';
+        unlight();
+      });
+    });
+    stopPlaying = () => stops.forEach((stop) => stop());
+  };
+  round();
+}
+
+$('songs-btn').addEventListener('click', showSongs);
+$('songs-back-btn').addEventListener('click', showHome);
+$('song-back-btn').addEventListener('click', showSongs);
+$('song-play-btn').addEventListener('click', playSong);

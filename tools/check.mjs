@@ -9,6 +9,8 @@ import { placeNotes, positionsFor, drawTab, tabToken, otherSpots, tabText, fretO
 import { riffConfidence, isUnsure } from '../js/confidence.js';
 import { rhythmOf, meterOf, barOf, groupOf, detectTempo, METERS, barStarts } from '../js/rhythm.js';
 import { tabSvg } from '../js/tabsvg.js';
+import { staffSvg } from '../js/staffsvg.js';
+import { SONGS, partNotes, pitchOf } from '../js/songs.js';
 import { openInput } from '../js/audio.js';
 import { saveRiff, loadRiffs, updateRiff, deleteRiff, deleteAllRiffs, riffTiming } from '../js/storage.js';
 import { writtenRiff, retime, typedFret } from '../js/editor.js';
@@ -349,6 +351,66 @@ check('rhythm: two notes very close together never land on the same spot',
   const measures = [...rest.matchAll(/class="t-measure"[^>]*>(\d+)</g)].map((m) => m[1]).join(' ');
   check('tab picture: a long rest still draws every bar line and measure number (1 2 3)',
     measures === '1 2 3' && (rest.match(/class="t-bar"/g) || []).length === 4 && !rest.includes('NaN'), measures);
+}
+
+// --- Standard notation (the five-line staff above the tab) ---
+{
+  const xsOf = (svg, cls) => [...svg.matchAll(new RegExp(`class="${cls}[^"]*"[^>]*?(?:cx|x)="([\\d.]+)"`, 'g'))].map((m) => Number(m[1]).toFixed(1)).join(' ');
+  const count = (svg, cls) => (svg.match(new RegExp(`class="${cls}[" ]`, 'g')) || []).length;
+  const staff = staffSvg(timed, { bpm: 120, endTime: 4.0 });
+  check('notation: no broken numbers (NaN) in the drawing', !staff.includes('NaN') && !staff.includes('undefined'));
+  check('notation: five staff lines, a clef and the time signature', count(staff, 's-line') === 5 && staff.includes('s-clef') && count(staff, 's-time') === 2);
+  check('notation: one note head per note', count(staff, 's-head') === timed.length, count(staff, 's-head'));
+  check('notation: every note sits right above its fret number in the tab',
+    xsOf(staff, 's-head') === xsOf(tabSvg(timed, { bpm: 120, endTime: 4.0 }), 't-fret'), xsOf(staff, 's-head'));
+  check('notation: bar lines line up with the tab\'s', count(staff, 's-bar') === 3);
+  check('notation: an empty riff is still a clean empty staff', !staffSvg([]).includes('NaN') && count(staffSvg([]), 's-line') === 5);
+  // Open low E is written as the E below the staff (guitar is written an octave up): 3 ledger lines.
+  const lowE = staffSvg([{ string: 6, fret: 0, midi: 40, t: 0 }], { bpm: 120, endTime: 0.5 });
+  check('notation: the open low E gets 3 ledger lines below the staff', count(lowE, 's-ledger') === 3, count(lowE, 's-ledger'));
+  check('notation: the open high e (top space) needs no ledger lines', count(staffSvg([{ string: 1, fret: 0, midi: 64, t: 0 }]), 's-ledger') === 0);
+  // F# F# F in one bar, then F# in the next: sharp, (nothing), natural, sharp again.
+  const signs = staffSvg([{ midi: 54, t: 0 }, { midi: 54, t: 0.5 }, { midi: 53, t: 1 }, { midi: 54, t: 2 }].map((n) => ({ ...n, string: 6, fret: n.midi - 40 })), { bpm: 120, endTime: 2.5 });
+  const marks = [...signs.matchAll(/class="s-accidental"[^>]*>([^<]+)</g)].map((m) => m[1]).join(' ');
+  check('notation: a sharp lasts until the bar line, and a natural sign cancels it', marks === '♯ ♮ ♯', marks);
+  const long = staffSvg([{ string: 3, fret: 2, midi: 57, t: 0 }, { string: 3, fret: 4, midi: 59, t: 1 }], { bpm: 120, endTime: 3 });
+  check('notation: half and whole notes are hollow, with no stem on the whole note',
+    count(long, 's-head s-hollow') === 2 && count(long, 's-stem') === 1, `${count(long, 's-head s-hollow')} hollow, ${count(long, 's-stem')} stems`);
+  check('notation: a natural harmonic is a diamond', staffSvg([{ string: 3, fret: 12, midi: 67, t: 0, harmonic: true }]).includes('<polygon class="s-head'));
+  const sixteenths = Array.from({ length: 4 }, (_, i) => ({ string: 2, fret: i, midi: 59 + i, t: i * 0.125 }));
+  const staffBeams = count(staffSvg(sixteenths, { bpm: 120, endTime: 0.5 }), 's-beam');
+  const tabBeams = count(tabSvg(sixteenths, { bpm: 120, endTime: 0.5 }), 't-beam');
+  check('notation: 4 sixteenths in one beat are beamed together, the same as under the tab', staffBeams === 4 && staffBeams === tabBeams, `${staffBeams} vs ${tabBeams}`);
+  const plain = staffSvg(timed, { bpm: 120, endTime: 4.0, timing: false });
+  check('notation: with rhythm off there are no stems, beams or time signature, just the notes',
+    !plain.includes('s-stem') && !plain.includes('s-beam') && !plain.includes('s-time') && count(plain, 's-head') === timed.length);
+}
+
+// --- Songs library ---
+check('songs: note names read right', [pitchOf('C4'), pitchOf('A4'), pitchOf('F#5'), pitchOf('Bb4'), pitchOf('E2'), pitchOf('H2')].join(' ') === '60 69 78 70 40 ', [pitchOf('C4'), pitchOf('A4'), pitchOf('F#5'), pitchOf('Bb4'), pitchOf('E2'), pitchOf('H2')].join(' '));
+for (const song of SONGS) {
+  const barSeconds = (meterOf(song.meter).barBeats * 60) / song.bpm;
+  const lengths = song.parts.map((part) => partNotes(part, song.bpm).endTime / barSeconds);
+  check(`songs: ${song.title}: every part is whole bars, all the same length`,
+    lengths.every((bars) => Math.abs(bars - Math.round(bars)) < 1e-9 && Math.abs(bars - lengths[0]) < 1e-9), lengths.join(' '));
+  for (const part of song.parts) {
+    const { notes } = partNotes(part, song.bpm);
+    if (part.instrument === 'guitar') {
+      check(`songs: ${song.title}: ${part.name} part is all real strings and frets (0 to 24)`,
+        notes.every((n) => n.string >= 1 && n.string <= 6 && n.fret >= 0 && n.fret <= 24 && Number.isInteger(n.midi)));
+    } else {
+      check(`songs: ${song.title}: ${part.name} part is all real notes`, notes.every((n) => Number.isInteger(n.midi)));
+    }
+    const svg = part.instrument === 'guitar' ? staffSvg(notes, { bpm: song.bpm, meter: song.meter }) : staffSvg(notes, { bpm: song.bpm, meter: song.meter, guitar: false });
+    check(`songs: ${song.title}: ${part.name} part draws cleanly, one note head per note`, !svg.includes('NaN') && (svg.match(/class="s-head/g) || []).length === notes.length);
+  }
+}
+{
+  // A flute's A5 is written where it sounds (top space + 2 ledger steps up), with no 8 under the clef;
+  // the same A5 on guitar would be written an octave higher.
+  const flute = staffSvg([{ midi: 81, t: 0 }], { guitar: false });
+  check('songs: other instruments are written as they sound, without the guitar\'s 8', !flute.includes('s-clef-8') && (flute.match(/s-ledger/g) || []).length === 1, (flute.match(/s-ledger/g) || []).length);
+  check('songs: a note with no fret leaves the tab label empty (it\'s not on a guitar)', !tabSvg([{ midi: 81, t: 0 }]).includes('undefined'));
 }
 
 // --- Time signatures ---

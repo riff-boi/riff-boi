@@ -111,8 +111,40 @@ function blip(at, accent, destination) {
   tone.stop(at + 0.03);
 }
 
+// A flute-like note: a smooth tone (a sine wave) with a little breathy edge an octave up, a gentle
+// wobble in pitch (vibrato), and a soft start and end instead of a pluck.
+function blow(midi, at, length, destination) {
+  const hz = 440 * 2 ** ((midi - 69) / 12);
+  const tone = context.createOscillator();
+  tone.frequency.value = hz;
+  const edge = context.createOscillator();
+  edge.type = 'triangle';
+  edge.frequency.value = hz * 2;
+  const edgeLevel = context.createGain();
+  edgeLevel.gain.value = 0.08;
+  const wobble = context.createOscillator();
+  wobble.frequency.value = 5;
+  const depth = context.createGain();
+  depth.gain.value = hz * 0.005;
+  wobble.connect(depth);
+  depth.connect(tone.frequency);
+  depth.connect(edge.frequency);
+  const level = context.createGain();
+  level.gain.setValueAtTime(0, at);
+  level.gain.linearRampToValueAtTime(0.45, at + 0.04);
+  level.gain.setValueAtTime(0.4, Math.max(at + 0.04, at + length - 0.05));
+  level.gain.linearRampToValueAtTime(0, at + length + FADE);
+  tone.connect(level);
+  edge.connect(edgeLevel).connect(level);
+  level.connect(destination);
+  for (const node of [tone, edge, wobble]) {
+    node.start(at);
+    node.stop(at + length + FADE);
+  }
+}
+
 // Play notes (see playbackPlan for the options, plus `click: true` for a metronome click, which
-// needs `meter`). Call it from a tap: phones only let a page make sound after one. `onNote(i)` is
+// needs `meter`, and `sound: 'flute'` for a flute instead of a plucked string). Call it from a tap: phones only let a page make sound after one. `onNote(i)` is
 // called as note i starts, and `onEnd(finished)` once: finished is true if it played to the end,
 // false if it was stopped. Returns a function that stops it.
 export function playNotes(notes, options, onNote, onEnd) {
@@ -124,6 +156,10 @@ export function playNotes(notes, options, onNote, onEnd) {
   volume.gain.value = 0.5;
   volume.connect(context.destination);
   for (const { note, start, length } of plan) {
+    if (options.sound === 'flute') {
+      blow(note.midi, t0 + start, length, volume);
+      continue;
+    }
     const { buffer, rate } = pluck(note.midi);
     const source = context.createBufferSource();
     source.buffer = buffer;

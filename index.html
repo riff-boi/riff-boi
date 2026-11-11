@@ -29,6 +29,7 @@
     <!-- Or get the tab of a recording (a sound file) -->
     <div class="file-row">
       <button id="upload-btn" class="secondary-btn">Upload audio or sheet music</button>
+      <button id="songs-btn" class="secondary-btn">Songs</button>
       <input id="upload-input" type="file" accept="audio/*,.musicxml,.xml,.mxl" hidden>
     </div>
     <!-- Learn: three screens with music theory (Chords, Theory, Lessons) -->
@@ -56,6 +57,7 @@
       <label class="rhythm-switch" title="Work out the tempo from my notes when I tap Stop"><input id="auto-tempo-input" type="checkbox"> <span class="setting-label">Auto detect tempo</span></label>
       <label class="meter-picker"><span class="setting-label">Time</span> <select id="meter-select" class="input-select" aria-label="Time signature"></select></label>
       <label class="rhythm-switch" title="Turn off to just see the notes, evenly spaced"><input id="rhythm-input" type="checkbox" checked> <span class="setting-label">Show note lengths</span></label>
+      <label class="rhythm-switch" title="Show the notes on a music staff above the tab"><input id="notation-input" type="checkbox" checked> <span class="setting-label">Show standard notation</span></label>
       <label class="rhythm-switch" title="Watch my fretting hand to pick the right string"><input id="camera-input" type="checkbox"> <span class="setting-label">Camera (beta)</span></label>
       <button id="camera-setup-btn" class="small-btn" hidden>Set up camera</button>
     </div>
@@ -205,6 +207,34 @@
       <button id="riff-scale-shapes" class="small-btn">See shapes</button>
       <button id="riff-scale-neck" class="small-btn">See on neck</button>
     </div>
+  </section>
+
+  <!-- Songs: a library of ready-made pieces, each with its parts (like the tracks on a tab site) -->
+  <section id="screen-songs" class="screen" hidden>
+    <button id="songs-back-btn" class="back-btn">← Latest Riffs</button>
+    <h2 class="screen-title">Songs</h2>
+    <ul id="song-list" class="riff-list"></ul>
+  </section>
+
+  <!-- One song: pick a part to see it. Guitar parts are notation + tab, other instruments notation only. -->
+  <section id="screen-song" class="screen" hidden>
+    <button id="song-back-btn" class="back-btn">← Songs</button>
+    <h2 id="song-title" class="screen-title"></h2>
+    <p id="song-credit" class="muted song-credit"></p>
+    <div id="part-picker" class="choice-row" role="group" aria-label="Part"></div>
+    <div id="song-tab" class="tab"></div>
+    <div class="riff-main">
+      <button id="song-play-btn" class="secondary-btn play-btn riff-play">Play</button>
+    </div>
+    <div class="riff-groups">
+      <div class="riff-group">
+        <span class="setting-label group-label">Practice</span>
+        <label class="meter-picker"><span class="setting-label">Speed</span> <select id="song-speed-select" class="input-select"><option value="1">100%</option><option value="0.75">75%</option><option value="0.5">50%</option></select></label>
+        <label class="rhythm-switch"><input id="song-loop-input" type="checkbox"> <span class="setting-label">Loop</span></label>
+        <label class="rhythm-switch" title="Play only the part you're looking at"><input id="song-solo-input" type="checkbox"> <span class="setting-label">Only this part</span></label>
+      </div>
+    </div>
+    <p id="song-about" class="muted song-about"></p>
   </section>
 
   <!-- Write a tab: write a tab by hand, one note at a time, at the tempo and time signature set on the home screen -->
