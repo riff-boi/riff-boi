@@ -19,11 +19,12 @@ import { riffFromRecording } from './upload.js';
 import { readMusicXml } from './musicxml.js';
 import { findScale } from './scale.js';
 import { riffToLink, riffFromLink } from './share.js';
-import { initChords, loadChords } from './chords.js';
+import { initChords, loadChords, showScale } from './chords.js';
 import { initTheory } from './theory.js';
 import { initLessons, LESSON_COUNT } from './lessons.js';
 import { initQuiz, startQuiz } from './quiz.js';
-import { initShapes } from './shapes.js';
+import { initShapes, showShape } from './shapes.js';
+import { scaleFromName } from './music.js';
 import { progressLine } from './progress.js';
 
 const screens = {
@@ -442,6 +443,7 @@ function startRename(row, riff) {
 // --- Riff View: one saved riff ---
 
 let shownRiff = null; // the riff on this screen
+let riffScale = null; // its scale as { root, id }, if the Learn screens know it
 
 function showRiff(riff) {
   stopSound();
@@ -458,6 +460,8 @@ function showRiff(riff) {
     const outside = scale.outside ? `, with ${noteCount(scale.outside)} outside it` : '';
     $('riff-scale').textContent = `Sounds like ${scale.name}${scale.sameAs ? ` (the same notes as ${scale.sameAs})` : ''}${outside}`;
   }
+  riffScale = scale ? scaleFromName(scale.name) : null; // for the Learn buttons under it
+  $('riff-scale-actions').hidden = !riffScale;
   // Riffs saved before the confidence bar existed don't have a score: hide the bar for those.
   $('riff-confidence').hidden = !riff.confidence;
   if (riff.confidence) showConfidence($('riff-confidence'), riff.confidence);
@@ -1573,6 +1577,8 @@ initShapes();
 $('chords-btn').addEventListener('click', () => showScreen('chords'));
 $('theory-btn').addEventListener('click', () => showScreen('theory'));
 $('lessons-btn').addEventListener('click', () => showScreen('lessons'));
+$('riff-scale-shapes').addEventListener('click', () => { showShape(riffScale.root, riffScale.id); showScreen('shapes'); });
+$('riff-scale-neck').addEventListener('click', () => { showScale(riffScale.root, riffScale.id); showScreen('chords'); });
 $('quiz-btn').addEventListener('click', () => { startQuiz(); showScreen('quiz'); });
 $('shapes-btn').addEventListener('click', () => showScreen('shapes'));
 // Every Learn screen has a "← Latest Riffs" button.

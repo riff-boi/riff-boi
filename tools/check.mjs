@@ -21,7 +21,7 @@ import { wavFile } from '../js/wav.js';
 import { riffToLink, riffFromLink } from '../js/share.js';
 import { neckFromSetup, pickFrettingHand, spotForHand, fretAt, SETUP_FRETS } from '../js/neck.js';
 import { soundExtension } from '../js/sounds.js';
-import { parseChord, parseChords, suggestForSong, suggestForChord, makeScale, SCALE_BY_ID, nextMove, spellScale, noteName, chordKind } from '../js/music.js';
+import { parseChord, parseChords, suggestForSong, suggestForChord, makeScale, SCALE_BY_ID, nextMove, spellScale, noteName, chordKind, fingeringsFor, fingeringNotes, scaleFromName } from '../js/music.js';
 import { streakOf } from '../js/progress.js';
 import { makeQuestion } from '../js/quiz.js';
 import { findPosition } from '../js/shapes.js';
@@ -1107,6 +1107,33 @@ const box1 = findPosition(9, SCALE_BY_ID.minpent, 0);
 check('shapes: A minor pentatonic position 1 is frets 5 to 8, 12 notes', box1.start === 5 && box1.width === 4 && box1.notes.length === 12, JSON.stringify([box1.start, box1.notes.length]));
 const box2 = findPosition(9, SCALE_BY_ID.minpent, 1);
 check('shapes: A minor pentatonic position 2 starts at fret 7', box2.start === 7 && box2.notes.length === 12, JSON.stringify([box2.start, box2.notes.length]));
+
+
+// --- Learn screens, polish: chord shapes and riff scales ---
+let shapeProblems = [];
+let shapeCount = 0;
+for (let root = 0; root < 12; root++) {
+  for (const ending of ['', 'm', '7', 'm7', 'maj7', 'sus4', 'sus2', '5', 'm7b5']) {
+    const chord = parseChord(noteName(root, false) + ending);
+    const wanted = new Set(chord.tones.map((t) => t.pc));
+    for (const shape of fingeringsFor(chord)) {
+      shapeCount++;
+      const played = fingeringNotes(shape.frets).map((n) => n % 12);
+      const allIn = played.every((pc) => wanted.has(pc));
+      const hasRoot = played.includes(root);
+      // Everything but the 5th must be there: guitarists often leave the 5th out (like the open C7).
+      const fifth = chord.tones.find((t) => t.role === 'fifth')?.pc;
+      const hasEvery = [...wanted].every((pc) => pc === fifth || played.includes(pc));
+      if (!allIn || !hasRoot || (ending !== '5' && !hasEvery)) shapeProblems.push(`${chord.name} ${shape.name} ${shape.frets.join(',')}`);
+    }
+  }
+}
+check(`chord shapes: all ${shapeCount} shapes play only chord notes, include the root, and have every chord note (the 5th may be left out)`, shapeProblems.length === 0 && shapeCount > 100, shapeProblems.slice(0, 4).join(' | '));
+check('chord shapes: C has the open shape first; F gets a barre at fret 1',
+  fingeringsFor(parseChord('C'))[0].frets.join() === '-1,3,2,0,1,0' && fingeringsFor(parseChord('F')).some((f) => f.name === 'E shape, fret 1' && f.frets.join() === '1,3,3,2,1,1'));
+check('chord shapes: a chord we have no shape for (C9) gives none', fingeringsFor(parseChord('C9')).length === 0);
+check('riff scale: "A# minor pentatonic" and "E blues" are understood, nonsense is not',
+  scaleFromName('A# minor pentatonic')?.root === 10 && scaleFromName('A# minor pentatonic')?.id === 'minpent' && scaleFromName('E blues')?.id === 'blues' && scaleFromName('hello') === null);
 
 console.log(allOk ? '\nALL CHECKS PASS' : '\nSOME CHECKS FAILED');
 process.exit(allOk ? 0 : 1);

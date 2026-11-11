@@ -8,9 +8,12 @@ Deadline: Wednesday, Sep 30, 2026 at 5:00pm EDT (Beginner's Paradise – FirstCo
 
 ## Next up
 
+
 Nov 11, 2026: There's a Songs section now (button next to Upload on the home screen), starting with the Great Fairy Fountain flute & guitar duet. To test: open it, switch between Flute and Guitar, play both parts, try Only this part, Loop and 50% speed. Later: chords and rests, so songs can have their intros and endings.
 
 Nov 11, 2026: Standard notation is in. It draws a five-line staff above the tab everywhere, with a Show standard notation switch in Settings. To test: open a riff, Write a tab and record something, check the notes look right (sharps, ledger lines, stems and beams), play a riff and watch the notes turn red on both, and turn the switch off and on. Then run `node tools/check.mjs` and `node tools/score.mjs`, and push if it all looks good.
+
+Nov 9, 2026: made the Learn screens better on the `feature/learn-polish` branch (phone layout, chord shapes, Play chords, Add a chord, riff scale buttons). Pull request opened. Test on my phone, then merge.
 
 Oct 26, 2026 (after the deadline): added the Learn screens (Chords, Theory, Lessons, Quiz, Shapes) on the `feature/learn-screens` branch, as a pull request. It adds a new row of buttons on the home screen and 8 new files in `js/`. Test it on my phone and guitar before merging.
 

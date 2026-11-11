@@ -297,6 +297,69 @@ export function spellScale(rootName, distances) {
   });
 }
 
+// --- How to play a chord (fingerings) ---
+
+// A fingering is 6 fret numbers, low E to high e. -1 means "don't play this string".
+const STRING_NOTES = [40, 45, 50, 55, 59, 64];
+
+// Which kind of chord is it, for picking a shape? Chords we have no shape for (9, 6, dim ...) give null.
+export function shapeKind(chord) {
+  const e = chord.ending;
+  if (['', 'maj', 'M'].includes(e)) return 'maj';
+  if (['m', 'min', '-'].includes(e)) return 'min';
+  if (e === '7') return '7';
+  if (['m7', 'min7', '-7'].includes(e)) return 'm7';
+  if (['maj7', 'M7', 'Δ', 'Δ7', 'ma7'].includes(e)) return 'maj7';
+  if (['sus4', 'sus'].includes(e)) return 'sus4';
+  if (e === 'sus2') return 'sus2';
+  if (e === '5') return '5';
+  if (['m7b5', 'min7b5', '-7b5', 'ø', 'ø7'].includes(e)) return 'm7b5';
+  return null;
+}
+
+// The shapes you know from open chords, in the order of the notes C=0 ... B=11.
+const OPEN_SHAPES = [
+  [0, 'maj', [-1, 3, 2, 0, 1, 0]], [0, 'maj7', [-1, 3, 2, 0, 0, 0]], [0, '7', [-1, 3, 2, 3, 1, 0]],
+  [2, 'maj', [-1, -1, 0, 2, 3, 2]], [2, 'min', [-1, -1, 0, 2, 3, 1]], [2, '7', [-1, -1, 0, 2, 1, 2]],
+  [2, 'maj7', [-1, -1, 0, 2, 2, 2]], [2, 'm7', [-1, -1, 0, 2, 1, 1]], [2, 'sus4', [-1, -1, 0, 2, 3, 3]], [2, 'sus2', [-1, -1, 0, 2, 3, 0]],
+  [7, 'maj', [3, 2, 0, 0, 0, 3]], [7, '7', [3, 2, 0, 0, 0, 1]], [7, 'maj7', [3, 2, 0, 0, 0, 2]],
+  [5, 'maj7', [-1, -1, 3, 2, 1, 0]], [11, '7', [-1, 2, 1, 2, 0, 2]],
+];
+
+// Movable shapes. Add the fret of the root to every number (the barre).
+// E shape: the root is on the low E string. A shape: the root is on the A string.
+const E_SHAPES = { maj: [0, 2, 2, 1, 0, 0], min: [0, 2, 2, 0, 0, 0], 7: [0, 2, 0, 1, 0, 0], m7: [0, 2, 0, 0, 0, 0], maj7: [0, 2, 1, 1, 0, 0], sus4: [0, 2, 2, 2, 0, 0], 5: [0, 2, 2, -1, -1, -1] };
+const A_SHAPES = { maj: [-1, 0, 2, 2, 2, 0], min: [-1, 0, 2, 2, 1, 0], 7: [-1, 0, 2, 0, 2, 0], m7: [-1, 0, 2, 0, 1, 0], maj7: [-1, 0, 2, 1, 2, 0], sus4: [-1, 0, 2, 2, 3, 0], sus2: [-1, 0, 2, 2, 0, 0], 5: [-1, 0, 2, 2, -1, -1], m7b5: [-1, 0, 1, 0, 1, -1] };
+
+// Up to 3 ways to play a chord, easiest first: [{ name, frets }]. Empty if we have no shape for it.
+export function fingeringsFor(chord) {
+  const kind = shapeKind(chord);
+  if (!kind) return [];
+  const found = [];
+  const add = (name, frets) => {
+    if (!found.some((f) => f.frets.join() === frets.join())) found.push({ name, frets });
+  };
+  const open = OPEN_SHAPES.find(([root, k]) => root === chord.root && k === kind);
+  if (open) add('Open', open[2]);
+  const shift = (shape, fret) => shape.map((n) => (n < 0 ? -1 : n + fret));
+  const eFret = (chord.root - 4 + 12) % 12;
+  if (E_SHAPES[kind]) add(eFret === 0 ? 'Open' : `E shape, fret ${eFret}`, shift(E_SHAPES[kind], eFret));
+  const aFret = (chord.root - 9 + 12) % 12;
+  if (A_SHAPES[kind]) add(aFret === 0 ? 'Open' : `A shape, fret ${aFret}`, shift(A_SHAPES[kind], aFret));
+  return found.slice(0, 3);
+}
+
+// The note numbers a fingering plays, low string first (for playing it and for checking it).
+export const fingeringNotes = (frets) => frets.map((f, i) => (f < 0 ? null : STRING_NOTES[i] + f)).filter((n) => n !== null);
+
+// "A# minor pentatonic" (the words scale.js gives a riff) → { root, id } for the Shapes and Chords screens.
+const SCALE_IDS = { 'minor pentatonic': 'minpent', 'major pentatonic': 'majpent', blues: 'blues', minor: 'minor', major: 'major', 'harmonic minor': 'harmonic', phrygian: 'phrygian' };
+export function scaleFromName(text) {
+  const match = text.match(/^([A-G][#b]?) (.+)$/);
+  const id = match && SCALE_IDS[match[2].toLowerCase()];
+  return id ? { root: noteNumber(match[1]), id } : null;
+}
+
 // --- Sound (so you can hear the notes) ---
 
 let audioContext = null;
