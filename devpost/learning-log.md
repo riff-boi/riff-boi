@@ -315,6 +315,14 @@ What I learned and the problems I solved while building Riff Boi. I'm using this
 - Then Riff Boi picks the strings and frets the same way it does for anything I play: the spots that need the least hand movement, based on the notes around each one.
 
 
+## Oct 26, 2026: Learn screens (Chords, Theory, Lessons, Quiz, Shapes)
+- Five new screens, each with a button on the home screen. The music logic lives in `js/music.js`, which never touches the page, so `tools/check.mjs` tests it in Node. Each screen has its own file, and `app.js` only shows and hides them.
+- Chords: a scale is a set of notes. Every scale on every starting note gets a score for how many of your chord notes fit inside it (the root and 3rd count most). A minor key and its relative major share notes, so the list shows one and says "same notes as" for the other.
+- Notes are numbers 0 to 11 in the code, and names are made at the end, with sharps or flats chosen from what you typed or from the key.
+- Shapes: a position is a window of 4 or 5 frets where every string has 2 or more scale notes, and the lowest note on the low E string is the note it is named after. My first version found a valid window that was a different position, and a check caught it.
+- Quiz and progress: the quiz builds questions from a random type, and a check runs 400 of them to make sure each has one right answer and no repeated choices. Lessons you tick, your best quiz score and your practice days are saved in the browser. A streak counts back from today.
+- Git: I built this on an old copy first. Meanwhile `main` on GitHub had moved a long way ahead, so I rebuilt the branch from the latest `main` and copied my new files in. A branch made from old code would have undone newer work.
+- I left out a "Theory of this riff" box. `scale.js` already finds the scale of a riff.
 ## Nov 11, 2026: Standard notation above the tab
 - I wanted Riff Boi to show standard notation too, like Songsterr. We could use a library (abcjs) or draw it ourselves. I picked drawing it ourselves, because then every note sits right above its fret number, and it matches the rest of my tab.
 - To make them line up, we pulled the part of `tabsvg.js` that works out where each note goes across the page into its own function, `tabLayout`. The tab and the new `staffsvg.js` both use it, so they always agree. Before changing anything, we checked the tab still came out exactly the same, character for character, on 1,500 made-up riffs.

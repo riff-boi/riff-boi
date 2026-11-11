@@ -19,6 +19,12 @@ import { riffFromRecording } from './upload.js';
 import { readMusicXml } from './musicxml.js';
 import { findScale } from './scale.js';
 import { riffToLink, riffFromLink } from './share.js';
+import { initChords, loadChords } from './chords.js';
+import { initTheory } from './theory.js';
+import { initLessons, LESSON_COUNT } from './lessons.js';
+import { initQuiz, startQuiz } from './quiz.js';
+import { initShapes } from './shapes.js';
+import { progressLine } from './progress.js';
 
 const screens = {
   home: document.getElementById('screen-home'),
@@ -30,6 +36,11 @@ const screens = {
   editor: document.getElementById('screen-editor'),
   songs: document.getElementById('screen-songs'),
   song: document.getElementById('screen-song'),
+  chords: document.getElementById('screen-chords'),
+  theory: document.getElementById('screen-theory'),
+  lessons: document.getElementById('screen-lessons'),
+  quiz: document.getElementById('screen-quiz'),
+  shapes: document.getElementById('screen-shapes'),
 };
 const $ = (id) => document.getElementById(id);
 const liveTab = $('live-tab');
@@ -320,6 +331,7 @@ $('delete-all-btn').addEventListener('click', () => {
 
 function showHome() {
   stopSound();
+  $('learn-progress').textContent = progressLine(LESSON_COUNT);
   // Leaving a shared riff: take it out of the address, so a reload doesn't open it again.
   if (location.hash.startsWith('#riff=')) history.replaceState(null, '', location.pathname + location.search);
   const riffs = loadRiffs();
@@ -1545,6 +1557,26 @@ saveReadingsBtn.addEventListener('click', () => {
   link.download = 'riffboi-readings.json';
   link.click();
 });
+
+// --- Learn: the Chords, Theory, Lessons, Quiz and Shapes screens (in chords.js, theory.js, lessons.js, quiz.js and shapes.js) ---
+
+initChords();
+initTheory({
+  openChords: (text) => { // "Open in Chords" buttons in the Theory screen
+    loadChords(text);
+    showScreen('chords');
+  },
+});
+initLessons();
+initQuiz();
+initShapes();
+$('chords-btn').addEventListener('click', () => showScreen('chords'));
+$('theory-btn').addEventListener('click', () => showScreen('theory'));
+$('lessons-btn').addEventListener('click', () => showScreen('lessons'));
+$('quiz-btn').addEventListener('click', () => { startQuiz(); showScreen('quiz'); });
+$('shapes-btn').addEventListener('click', () => showScreen('shapes'));
+// Every Learn screen has a "← Latest Riffs" button.
+for (const button of document.querySelectorAll('[data-back]')) button.addEventListener('click', showHome);
 
 openSharedRiff(); // a shared riff's link, or home
 
