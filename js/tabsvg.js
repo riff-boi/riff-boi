@@ -30,43 +30,8 @@ const stringY = (string) => TOP + (string - 1) * LINE_GAP; // string 1 (high e) 
 // highlightLast (the newest note in red, while recording).
 // Returns the picture as SVG text.
 export function tabSvg(notes, { bpm = 120, endTime = null, meter = '4/4', timing = true, rhythm = true, bendArrows = true, highlightLast = false } = {}) {
-  const time = meterOf(meter);
-  // With rhythm off, pretend every note is a quarter note in one long bar: evenly spaced.
-  const beats = timing ? rhythmOf(notes, bpm, endTime) : notes.map(() => ({ beat: 0, value: { beats: 0, name: 'none' } }));
+  const { time, beats, labels, widths, xs, bars, end } = tabLayout(notes, { bpm, endTime, meter, timing, bendArrows });
   if (!timing) rhythm = false;
-  const start = timing ? START : 36; // no 4/4 to make room for when rhythm is off
-  const labels = notes.map((note) => (bendArrows && !note.harmonic ? String(note.fret) : tabToken(note)));
-  const widths = labels.map((label) => label.length * DIGIT + 4);
-
-  // Across the page: each note's x, and the bar lines (one every bar) in between.
-  const xs = [];
-  const bars = [];
-  notes.forEach((note, i) => {
-    if (i === 0) {
-      xs.push(start + widths[0] / 2);
-      return;
-    }
-    const prev = xs[i - 1];
-    const room = (widths[i - 1] + widths[i]) / 2 + 10 + (notes[i - 1].bend && bendArrows ? BEND_ROOM : 0);
-    let gap = Math.max(MIN_GAP, room, (beats[i].beat - beats[i - 1].beat) * BEAT_WIDTH);
-    const barBefore = barOf(beats[i - 1].beat, time); // 0 = measure 1
-    const barNow = barOf(beats[i].beat, time);
-    if (barNow > barBefore) {
-      gap += 2 * BAR_PAD;
-      // A bar line just before this note. If a long rest skipped whole bars, their lines
-      // go in between, spaced by beats, so no measure goes missing.
-      const lastX = prev + gap - BAR_PAD - widths[i] / 2 - 6;
-      const fromX = prev + widths[i - 1] / 2 + BAR_PAD;
-      for (let bar = barBefore + 1; bar <= barNow; bar++) {
-        const share = (bar * time.barBeats - beats[i - 1].beat) / (barNow * time.barBeats - beats[i - 1].beat);
-        bars.push({ x: fromX + (lastX - fromX) * share, measure: bar + 1 });
-      }
-    }
-    xs.push(prev + gap);
-  });
-  const lastBend = notes.length && notes[notes.length - 1].bend && bendArrows ? BEND_ROOM + 10 : 0;
-  const lastBeats = notes.length ? beats[beats.length - 1].value.beats : 1;
-  const end = (notes.length ? xs[xs.length - 1] + Math.max(MIN_GAP, widths[widths.length - 1] / 2 + 12 + lastBend, lastBeats * BEAT_WIDTH) : start + 60);
   const height = rhythm ? STEM_TOP + STEM_LENGTH + 10 : TOP + STAFF + 14;
 
   const parts = [];
@@ -115,6 +80,50 @@ export function tabSvg(notes, { bpm = 120, endTime = null, meter = '4/4', timing
 
   const label = `Tab of ${notes.length} note${notes.length === 1 ? '' : 's'}` + (timing ? ` at ${Math.round(bpm)} BPM in ${time.top}/${time.bottom}` : '');
   return `<svg class="tab-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${end + 4} ${height}" width="${end + 4}" height="${height}" role="img" aria-label="${label}">${parts.join('')}</svg>`;
+}
+
+// Where everything goes across the page: each note's x, the bar lines and where the staff ends.
+// The standard notation (staffsvg.js) uses this too, so its notes sit right above the tab's.
+// Returns { time, beats, labels, widths, xs, bars, end, start }.
+export function tabLayout(notes, { bpm = 120, endTime = null, meter = '4/4', timing = true, bendArrows = true } = {}) {
+  const time = meterOf(meter);
+  // With rhythm off, pretend every note is a quarter note in one long bar: evenly spaced.
+  const beats = timing ? rhythmOf(notes, bpm, endTime) : notes.map(() => ({ beat: 0, value: { beats: 0, name: 'none' } }));
+  const start = timing ? START : 36; // no 4/4 to make room for when rhythm is off
+  // A note with no fret (a flute in a song, say) has no label: it only goes on the staff.
+  const labels = notes.map((note) => (note.fret == null ? '' : bendArrows && !note.harmonic ? String(note.fret) : tabToken(note)));
+  const widths = labels.map((label) => label.length * DIGIT + 4);
+
+  // Across the page: each note's x, and the bar lines (one every bar) in between.
+  const xs = [];
+  const bars = [];
+  notes.forEach((note, i) => {
+    if (i === 0) {
+      xs.push(start + widths[0] / 2);
+      return;
+    }
+    const prev = xs[i - 1];
+    const room = (widths[i - 1] + widths[i]) / 2 + 10 + (notes[i - 1].bend && bendArrows ? BEND_ROOM : 0);
+    let gap = Math.max(MIN_GAP, room, (beats[i].beat - beats[i - 1].beat) * BEAT_WIDTH);
+    const barBefore = barOf(beats[i - 1].beat, time); // 0 = measure 1
+    const barNow = barOf(beats[i].beat, time);
+    if (barNow > barBefore) {
+      gap += 2 * BAR_PAD;
+      // A bar line just before this note. If a long rest skipped whole bars, their lines
+      // go in between, spaced by beats, so no measure goes missing.
+      const lastX = prev + gap - BAR_PAD - widths[i] / 2 - 6;
+      const fromX = prev + widths[i - 1] / 2 + BAR_PAD;
+      for (let bar = barBefore + 1; bar <= barNow; bar++) {
+        const share = (bar * time.barBeats - beats[i - 1].beat) / (barNow * time.barBeats - beats[i - 1].beat);
+        bars.push({ x: fromX + (lastX - fromX) * share, measure: bar + 1 });
+      }
+    }
+    xs.push(prev + gap);
+  });
+  const lastBend = notes.length && notes[notes.length - 1].bend && bendArrows ? BEND_ROOM + 10 : 0;
+  const lastBeats = notes.length ? beats[beats.length - 1].value.beats : 1;
+  const end = (notes.length ? xs[xs.length - 1] + Math.max(MIN_GAP, widths[widths.length - 1] / 2 + 12 + lastBend, lastBeats * BEAT_WIDTH) : start + 60);
+  return { time, beats, labels, widths, xs, bars, end, start };
 }
 
 // A bend: a curved arrow from the note up above the tab, labelled ½, full or 1½.

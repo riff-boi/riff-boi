@@ -8,6 +8,10 @@ Deadline: Wednesday, Sep 30, 2026 at 5:00pm EDT (Beginner's Paradise – FirstCo
 
 ## Next up
 
+Nov 11, 2026: There's a Songs section now (button next to Upload on the home screen), starting with the Great Fairy Fountain flute & guitar duet. To test: open it, switch between Flute and Guitar, play both parts, try Only this part, Loop and 50% speed. Later: chords and rests, so songs can have their intros and endings.
+
+Nov 11, 2026: Standard notation is in (on my Mac, not pushed yet). It draws a five-line staff above the tab everywhere, with a Show standard notation switch in Settings. To test: open a riff, Write a tab and record something, check the notes look right (sharps, ledger lines, stems and beams), play a riff and watch the notes turn red on both, and turn the switch off and on. Then run `node tools/check.mjs` and `node tools/score.mjs`, and push if it all looks good.
+
 Where we left off (Sep 27, 2026):
 - While I was away (Sep 27 afternoon), Claude: smoke-tested riffboi.com (recording with a bend and release, the riff screen, playback, Your sound, share links, upload, New Tab, tuner, delete and Delete all: all fine), re-checked the bend fix, added a screenshot and the missing tech (MediaPipe, IndexedDB, Vercel) to the README, added the bend fix and camera setup to my story's challenges and the video script, and made `bends.png` (my real bends) for the gallery. Not pushed yet.
 - My answers (Sep 27): pushed, keep the 2 new story paragraphs, and `bends.png` goes in the Devpost gallery instead of `riff-bend.png`.

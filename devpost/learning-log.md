@@ -314,3 +314,19 @@ What I learned and the problems I solved while building Riff Boi. I'm using this
 - Guitar music is written an octave higher than it sounds, so a part called "Guitar" gets moved down an octave.
 - Then Riff Boi picks the strings and frets the same way it does for anything I play: the spots that need the least hand movement, based on the notes around each one.
 
+
+## Nov 11, 2026: Standard notation above the tab
+- I wanted Riff Boi to show standard notation too, like Songsterr. We could use a library (abcjs) or draw it ourselves. I picked drawing it ourselves, because then every note sits right above its fret number, and it matches the rest of my tab.
+- To make them line up, we pulled the part of `tabsvg.js` that works out where each note goes across the page into its own function, `tabLayout`. The tab and the new `staffsvg.js` both use it, so they always agree. Before changing anything, we checked the tab still came out exactly the same, character for character, on 1,500 made-up riffs.
+- Where a note goes up and down the staff only depends on its letter and octave (C D E F G A B), not on sharps. A sharp is a ♯ in front of the note, and it lasts until the bar line, so it's only drawn the first time in a bar. If the plain note comes back in the same bar, it gets a natural sign (♮).
+- Guitar music is written an octave higher than it sounds, so it fits on the treble staff. That's why the clef has a little 8 under it. My open low E is written as the E below the staff, with 3 short ledger lines.
+- Stems go up for notes below the middle line and down for notes on it or above. Notes joined by a beam all point the same way.
+- The treble clef character (𝄞) looked different on every computer, so we drew it with lines instead.
+- It's on everywhere (live, saved riffs and Write a tab), and Show standard notation in Settings turns it off. 15 new checks make sure it stays right.
+
+## Nov 11, 2026: A Songs library
+- Riff Boi has a Songs section now, like the song pages on a tab site. The first song is the Great Fairy Fountain from Ocarina of Time, as a flute and guitar duet (the parts are picked with buttons, like Songsterr's track picker).
+- A song is just data in `js/songs.js`: each part is a list of notes with how many sixteenths until the next one. `partNotes` turns that into the same kind of notes a riff has, so the tab, the staff and playback all work on songs without changes.
+- A flute isn't played on strings, so its notes have no string or fret. It only gets the staff, written at the pitch it sounds (no 8 under the clef, which is only for guitar).
+- Play plays both parts at the same time: one plucked string sound and one flute-like sound made from a smooth tone with a little vibrato. Only this part plays just the one you're looking at.
+- Riff Boi can't draw chords or rests yet, so the song has the main 8 bars. The intro chords and the ending are left out for now.
